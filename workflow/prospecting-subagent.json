@@ -1,0 +1,268 @@
+{
+  "name": "prospecting subagent - Controlled Test",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "query"
+            }
+          ]
+        }
+      },
+      "id": "f8d68a37-a2ce-4201-ac2a-d2133ae1ceab",
+      "name": "When Executed by Another Workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -384,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.query }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are a Sales Prospecting Agent.\n\nYour job is to find qualified sales prospects that match the user's search query and return them in the required structured output format.\n\nFor this controlled test, return exactly 1 qualified prospect.\n\nPROCESS\n\n1. Read the user's search query carefully.\n\n2. Use the available Firecrawl research/search tool to identify a real prospect who closely matches the requested:\n- role\n- industry\n- company type or size\n- location\n\n3. Do not invent a person, company, role, domain, or email address.\n\n4. Select the single strongest matching prospect before beginning email discovery. Do not switch to additional prospects unless the selected prospect clearly does not satisfy the user's search criteria.\n\n5. Use the Verifox Email Finder tool exactly once for the selected prospect. Supply the real prospect information discovered during research.\n\n6. The Verifox Email Finder may return a jobId because email discovery is asynchronous. Save and reuse that exact jobId.\n\n7. After receiving a valid jobId, use the Verifox Email Finder Result tool to check that SAME job.\n\n8. If the result status is \"running\", check the SAME jobId again. Do not create a new Verifox email-finder job.\n\n9. You may check the Verifox Email Finder Result a maximum of 3 times for the same jobId.\n\n10. If a completed Verifox result provides a professional email address, use that email.\n\n11. Never infer, predict, construct, or guess an email address.\n\n12. If the Verifox job is still \"running\", fails, or provides no professional email after the allowed result checks, return an empty string for email:\n\"email\": \"\"\n\n13. Do not repeatedly search Firecrawl after selecting a qualified prospect. Keep the entire process bounded and efficient.\n\n14. Return exactly ONE prospect in the required structured output with:\n- firstname\n- lastname\n- company\n- role\n- email\n- rationale\n\n15. The rationale must briefly explain why the prospect matches the requested role, industry/company type, and location.\n\n16. Return only the required structured output. Do not include explanations, markdown, commentary, or additional text outside the structured output.\n\nIMPORTANT:\n- Exactly 1 prospect.\n- Maximum 1 Verifox Email Finder request.\n- Maximum 3 Verifox Email Finder Result checks.\n- Always reuse the same jobId.\n- Never invent an email.\n- An empty email is acceptable if verification does not complete.",
+          "maxIterations": 20
+        }
+      },
+      "id": "1edacb30-bc80-4150-bb61-807f507e3a3e",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        128,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "google/gemma-4-31b-it",
+          "mode": "list",
+          "cachedResultName": "google/gemma-4-31b-it"
+        },
+        "responsesApiEnabled": false,
+        "options": {}
+      },
+      "id": "9254205b-14fd-48be-8ba5-c755542bd9f6",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -128,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "endpointUrl": "YOUR_FIRECRAWL_MCP_ENDPOINT",
+        "include": "selected",
+        "includeTools": [
+          "firecrawl_search"
+        ],
+        "options": {}
+      },
+      "id": "78e4b43d-57f3-4f7d-90e2-5916ca72a806",
+      "name": "MCP Client",
+      "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
+      "typeVersion": 1.4,
+      "position": [
+        144,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"prospects\": {\n      \"type\": \"array\",\n      \"minItems\": 1,\n      \"maxItems\": 1,\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"firstname\": {\n            \"type\": \"string\"\n          },\n          \"lastname\": {\n            \"type\": \"string\"\n          },\n          \"company\": {\n            \"type\": \"string\"\n          },\n          \"role\": {\n            \"type\": \"string\"\n          },\n          \"email\": {\n            \"type\": \"string\"\n          },\n          \"rationale\": {\n            \"type\": \"string\"\n          }\n        },\n        \"required\": [\n          \"firstname\",\n          \"lastname\",\n          \"company\",\n          \"role\",\n          \"email\",\n          \"rationale\"\n        ],\n        \"additionalProperties\": false\n      }\n    }\n  },\n  \"required\": [\n    \"prospects\"\n  ],\n  \"additionalProperties\": false\n}"
+      },
+      "id": "0536719d-9d9a-4f9f-9663-83316fa0a1c9",
+      "name": "Structured Output Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        528,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "toolDescription": "Find a verified professional email address for a prospect using their first name, last name, and company domain. Use this only after identifying a real prospect and their company's domain.",
+        "method": "POST",
+        "url": "https://api.verifox.ai/v1/email-finder",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "YOUR_VERIFOX_API_KEY"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "firstName",
+              "value": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('parameters0_Value', ``, 'string') }}"
+            },
+            {
+              "name": "lastName",
+              "value": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('parameters1_Value', ``, 'string') }}"
+            },
+            {
+              "name": "domain",
+              "value": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('parameters2_Value', ``, 'string') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.5,
+      "position": [
+        272,
+        512
+      ],
+      "id": "27a26f86-7325-4e0f-8f68-5e0fdbbced63",
+      "name": "Verifox Email Finder"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Check the status of a Verifox email-finder job using the job ID returned by the Verifox Email Finder tool.\n\nCall this tool only after the Verifox Email Finder tool has returned a valid jobId.\n\nIf the result status is \"completed\", use the returned verified email information.\n\nIf the result status is \"running\" or \"pending\", do not repeatedly call this tool in a tight loop. Stop the email lookup for that prospect and return the prospect with an empty email field.\n\nIf the lookup fails or no verified email is available, return an empty email field. Never invent or guess an email address.",
+        "url": "={{ 'https://api.verifox.ai/v1/email-finder/' + $fromAI('jobId', 'The Verifox email finder job ID returned by the previous email finder tool') }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "YOUR_VERIFOX_API_KEY"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.5,
+      "position": [
+        384,
+        640
+      ],
+      "id": "5891d03f-7c21-414e-88c7-bbb4b0b2609b",
+      "name": "Verifox Email Finder Result"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c7cbc640-b997-4753-a7c2-19969a6d368d",
+              "name": "prospects",
+              "value": "[{\"firstname\":\"Test\",\"lastname\":\"Prospect\",\"company\":\"Example Company\",\"role\":\"Operations Manager\",\"email\":\"test.prospect@example.com\",\"rationale\":\"Controlled test prospect for portfolio demonstration.\"}]",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -160,
+        80
+      ],
+      "id": "0cee2b4a-72ca-48a2-b0a9-7e5acb4927e5",
+      "name": "Edit Fields"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MCP Client": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verifox Email Finder": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verifox Email Finder Result": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "nodeGroups": [],
+  "tags": []
+}

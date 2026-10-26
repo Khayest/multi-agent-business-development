@@ -1,0 +1,188 @@
+{
+  "name": "SDR Subagent - Upgrade",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Create one personalized outbound sales email draft for the prospect provided below.\n\nProspect:\nFirst name: {{ $json.firstname }}\nLast name: {{ $json.lastname }}\nCompany: {{ $json.company }}\nRole: {{ $json.role }}\nEmail: {{ $json.email }}\nProspecting rationale: {{ $json.rationale }}\n\nThe email is from Ed Donner, CTO of AccountAI, an innovative accounting software company.\n\nRequirements:\n- Create exactly one email for this prospect.\n- Personalize the message using only the prospect information provided above.\n- Keep the email concise and professional.\n- State only that AccountAI provides innovative accounting software designed to streamline costs and drive efficiency.\n- Do not invent facts about the prospect, their company, AccountAI, or its products.\n- If the prospect is interested, invite them to call [DEMO_PHONE_NUMBER] to speak with the AI Agent and schedule a demo.\n- Format the email body in HTML.\n- Use the Gmail draft tool to create a draft addressed only to the supplied prospect email.\n- Create a draft only. Do not send the email.\n- Do not search for or process any other contacts.\n- After creating the draft, return a concise summary of what was created.",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        224,
+        0
+      ],
+      "id": "1d052040-1c0d-49d3-950c-017e11ef3af2",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "google/gemma-4-31b-it",
+          "mode": "list",
+          "cachedResultName": "google/gemma-4-31b-it"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        224,
+        192
+      ],
+      "id": "30f68e66-2f6e-4c7d-a106-618e713a71ef",
+      "name": "OpenAI Chat Model"
+    },
+    {
+      "parameters": {
+        "resource": "draft",
+        "subject": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Subject', ``, 'string') }}",
+        "emailType": "html",
+        "message": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Message', ``, 'string') }}",
+        "options": {
+          "sendTo": "={{ $('When Executed by Another Workflow').item.json.email }}"
+        }
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.2,
+      "position": [
+        400,
+        160
+      ],
+      "id": "07291b7d-ba28-43f2-b94b-930d15d171d1",
+      "name": "Create a draft in Gmail"
+    },
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "firstname"
+            },
+            {
+              "name": "lastname"
+            },
+            {
+              "name": "company"
+            },
+            {
+              "name": "role"
+            },
+            {
+              "name": "email"
+            },
+            {
+              "name": "rationale"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        48,
+        0
+      ],
+      "id": "754fb330-08c4-4f82-9d5e-f6f5057dad7c",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f5c0ad6b-493c-4489-8e97-aea9d82601e8",
+              "name": "success",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "0b1b6384-069c-4ca6-8d75-0d168d831102",
+              "name": "status",
+              "value": "=draft_created",
+              "type": "string"
+            },
+            {
+              "id": "7ef765a1-1459-4818-9795-4029edea2467",
+              "name": "email",
+              "value": "={{ $('When Executed by Another Workflow').item.json.email }}",
+              "type": "string"
+            },
+            {
+              "id": "e1f43108-3cac-4ef2-91fa-1109f2da9a22",
+              "name": "prospect_name",
+              "value": "={{ $('When Executed by Another Workflow').item.json.firstname + ' ' + $('When Executed by Another Workflow').item.json.lastname }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        592,
+        0
+      ],
+      "id": "b0dc443f-b792-419f-a10c-417b9a68fe88",
+      "name": "Return Draft Result"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a draft in Gmail": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Return Draft Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "nodeGroups": [],
+  "tags": []
+}

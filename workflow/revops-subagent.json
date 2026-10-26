@@ -1,0 +1,212 @@
+{
+  "name": "RevOps Subagent - Upgrade",
+  "nodes": [
+    {
+      "parameters": {
+        "resource": "person",
+        "name": "={{ $('When Executed by Another Workflow').item.json.firstname + ' ' + $('When Executed by Another Workflow').item.json.lastname }}",
+        "additionalFields": {
+          "emails": {
+            "emailProperties": [
+              {
+                "value": "={{ $('When Executed by Another Workflow').item.json.email }}"
+              }
+            ]
+          },
+          "org_id": "={{ $json.id }}"
+        }
+      },
+      "id": "d9851c97-b3f2-4aa3-a830-0adb2020b2ed",
+      "name": "Create a person",
+      "type": "n8n-nodes-base.pipedrive",
+      "typeVersion": 2,
+      "position": [
+        864,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "lead",
+        "title": "={{ $('When Executed by Another Workflow').item.json.firstname + ' ' + $('When Executed by Another Workflow').item.json.lastname }}",
+        "organization_id": "={{ $('Create an organization').item.json.id }}",
+        "additionalFields": {
+          "person_id": "={{ $json.id }}"
+        }
+      },
+      "id": "421a9228-e2b4-46a9-916e-2561d16687e1",
+      "name": "Create a lead",
+      "type": "n8n-nodes-base.pipedrive",
+      "typeVersion": 2,
+      "position": [
+        1088,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "organization",
+        "name": "={{ $('When Executed by Another Workflow').item.json.company }}",
+        "additionalFields": {}
+      },
+      "id": "0031a4f9-b2cc-4bd8-9a84-59b458945733",
+      "name": "Create an organization",
+      "type": "n8n-nodes-base.pipedrive",
+      "typeVersion": 2,
+      "position": [
+        640,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "firstname "
+            },
+            {
+              "name": "lastname"
+            },
+            {
+              "name": "company"
+            },
+            {
+              "name": "role"
+            },
+            {
+              "name": "email"
+            },
+            {
+              "name": "rationale"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        400,
+        0
+      ],
+      "id": "10fb0291-d0dc-4f43-a201-394c284bdd7b",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "content": "## Load data\nstore prospect data in Pipedrive.",
+        "height": 416,
+        "width": 688
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        576,
+        -32
+      ],
+      "typeVersion": 1,
+      "id": "20748063-d551-40d6-9b30-ef73749b2d05",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d30f7bbf-0fcd-4538-952c-04caf0680e8e",
+              "name": "success",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "5ca4d2a6-f9fc-4b55-a931-fd7e4aefbd43",
+              "name": "status",
+              "value": "created",
+              "type": "string"
+            },
+            {
+              "id": "e6cc142f-6f64-4aca-91d0-deaacc4386dd",
+              "name": "person_id",
+              "value": "={{ $('Create a person').item.json.id }}",
+              "type": "number"
+            },
+            {
+              "id": "d849fe21-c39d-4969-82f4-0cf6d80d0932",
+              "name": "organization_id",
+              "value": "={{ $('Create an organization').item.json.id }}",
+              "type": "number"
+            },
+            {
+              "id": "adb89630-dc38-4ce3-be15-1be7a312f158",
+              "name": "lead_id",
+              "value": "={{ $('Create a lead').item.json.id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        1312,
+        0
+      ],
+      "id": "56837009-92cf-4dab-98a4-c68321f865f6",
+      "name": "Return Created Result"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Create a person": {
+      "main": [
+        [
+          {
+            "node": "Create a lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create an organization": {
+      "main": [
+        [
+          {
+            "node": "Create a person",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Create an organization",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a lead": {
+      "main": [
+        [
+          {
+            "node": "Return Created Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "nodeGroups": [],
+  "tags": []
+}

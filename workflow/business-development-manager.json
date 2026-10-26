@@ -1,0 +1,586 @@
+{
+  "name": "Multi-Agent Business Development System - Upgrade",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_DRIVE_FOLDER_ID",
+          "mode": "list",
+          "cachedResultName": "ICP Folder"
+        },
+        "event": "fileCreated",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "6c74543c-629c-4edf-9ab7-b76d93e034b2",
+      "name": "Google Drive Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        224,
+        0
+      ],
+      "id": "8f12a34e-08fe-44ac-953a-8685380ab41b",
+      "name": "Download file"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        448,
+        0
+      ],
+      "id": "b40ac208-7c53-40dd-b13c-4156e18da76f",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.text }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are the Business Development Manager Agent for AccountAI.\n\nYou must execute the following workflow in this exact order.\n\nSTEP 1 — PROSPECTING\nCall the Prospecting Subagent exactly once.\n\nThe Prospecting Subagent returns one prospect with:\nfirstname\nlastname\ncompany\nrole\nemail\nrationale\n\nSTEP 2 — CRM\nImmediately call the RevOps Subagent exactly once using the prospect returned in Step 1.\n\nPass these six values exactly as returned:\nfirstname\nlastname\ncompany\nrole\nemail\nrationale\n\nDo not modify, reinterpret, search for, or replace these values.\n\nSTEP 3 — OUTREACH\nInspect the RevOps result.\n\nIf RevOps returns:\nsuccess = true\nand\nstatus = \"created\"\n\nthen immediately call the SDR Subagent exactly once using the same six prospect values from Step 1.\n\nThe SDR Subagent must create a Gmail draft only.\n\nIf RevOps returns success = false, do not call SDR.\n\nSTEP 4 — FINISH\nAfter the required tools have completed, stop calling tools.\n\nReturn the required structured output.\n\nFor a successful complete run:\nsuccess = true\nprospects_found = 1\nprospects_stored = 1\ndrafts_created = 1\nfailed_or_rejected = 0\n\nDo not call Prospecting more than once.\nDo not call RevOps more than once.\nDo not call SDR more than once.\nDo not repeat a completed step.\nDo not perform additional reasoning after all required steps are complete.",
+          "maxIterations": 30
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        864,
+        0
+      ],
+      "id": "dd84dbd3-0bad-4c97-b559-29aae9c1d176",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "google/gemma-4-31b-it",
+          "mode": "list",
+          "cachedResultName": "google/gemma-4-31b-it"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        640,
+        240
+      ],
+      "id": "2cd9035a-e0bf-4ec9-91b0-0cb64e6699ce",
+      "name": "OpenAI Chat Model"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"success\": true,\n  \"prospects_found\": 5,\n  \"prospects_stored\": 5,\n  \"drafts_created\": 5,\n  \"failed_or_rejected\": 0,\n  \"summary\": \"A concise summary of the completed business development run\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1168,
+        224
+      ],
+      "id": "0d497569-d7a8-4fd9-a239-11744fe0d13a",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "7c69f3b2-368e-4205-ad58-0c6d21b8c358",
+              "leftValue": "={{ $json.output.success }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1392,
+        0
+      ],
+      "id": "b9db7fe8-db30-4fc2-be3f-bf232c64fd41",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "userKey": "YOUR_PUSHOVER_USER_KEY",
+        "message": "workflow is succeeful",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.pushover",
+      "typeVersion": 1,
+      "position": [
+        1616,
+        -32
+      ],
+      "id": "491c521a-00e6-4399-bbe9-219bae8c92dc",
+      "name": "Push a message"
+    },
+    {
+      "parameters": {
+        "userKey": "YOUR_PUSHOVER_USER_KEY",
+        "message": "workflow is unsuccessful",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.pushover",
+      "typeVersion": 1,
+      "position": [
+        1616,
+        96
+      ],
+      "id": "3cd4e292-254d-47fd-aa11-1dd7aeeddfd7",
+      "name": "Push a message1"
+    },
+    {
+      "parameters": {
+        "content": "Data Extraction",
+        "height": 416,
+        "width": 592
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -32,
+        -48
+      ],
+      "typeVersion": 1,
+      "id": "930e46c7-11ab-4457-bf42-de5ebb395302",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "Agent",
+        "height": 416,
+        "width": 720
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        592,
+        -48
+      ],
+      "typeVersion": 1,
+      "id": "edce089d-dcf6-4465-b385-25b86f1ceb61",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "Notification",
+        "height": 416,
+        "width": 480
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1328,
+        -48
+      ],
+      "typeVersion": 1,
+      "id": "e026eed5-2383-4ab4-ab97-2bee54125a18",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "description": "Create one personalized Gmail draft for one supplied prospect.\n\nProvide the prospect's firstname, lastname, company, role, email, and rationale as separate structured inputs.\n\nCall this tool separately once for each prospect that requires an outreach draft.\n\nUse only information returned by the Prospecting Subagent. Do not search for or process other CRM contacts. This tool creates a draft only and does not send the email.",
+        "workflowId": {
+          "__rl": true,
+          "value": "YOUR_SDR_SUBAGENT_WORKFLOW_ID",
+          "mode": "list",
+          "cachedResultName": "SDR Subagent - Upgrade"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "firstname": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('firstname', ``, 'string') }}",
+            "lastname": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('lastname', ``, 'string') }}",
+            "company": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('company', ``, 'string') }}",
+            "role": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('role', ``, 'string') }}",
+            "email": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('email', ``, 'string') }}",
+            "rationale": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('rationale', ``, 'string') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "firstname",
+              "displayName": "firstname",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "lastname",
+              "displayName": "lastname",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "company",
+              "displayName": "company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "role",
+              "displayName": "role",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "rationale",
+              "displayName": "rationale",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        1056,
+        224
+      ],
+      "id": "a1d3401b-70df-4d99-b059-c60613fdb5e2",
+      "name": "Call 'SDR Subagent - Upgrade'"
+    },
+    {
+      "parameters": {
+        "description": "Search for sales prospects that match the supplied Ideal Customer Profile (ICP).\n\nUse the query provided by the Sales Manager Agent to find relevant prospects and return structured prospect information.\n\nReturn firstname, lastname, company, role, email, and rationale for each prospect.\n\nReturn only information obtained through the Prospecting Subagent's available research tools. Do not invent prospect details or email addresses.\n\nCall this tool once per business development run to retrieve multiple prospects.",
+        "workflowId": {
+          "__rl": true,
+          "value": "YOUR_PROSPECTING_SUBAGENT_WORKFLOW_ID",
+          "mode": "list",
+          "cachedResultName": "prospecting subagent - Controlled Test"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "query": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('query', `A search query based on the supplied Ideal Customer Profile (ICP).`, 'string') }}"
+          },
+          "matchingColumns": [
+            "query"
+          ],
+          "schema": [
+            {
+              "id": "query",
+              "displayName": "query",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        784,
+        224
+      ],
+      "id": "897f54b8-70df-45ff-b025-d2b9db41b17a",
+      "name": "Call 'prospecting subagent - Controlled Test'"
+    },
+    {
+      "parameters": {
+        "description": "Save one supplied prospect as a sales lead in Pipedrive. Use this tool once for each prospect returned by the Prospecting Subagent.",
+        "workflowId": {
+          "__rl": true,
+          "value": "YOUR_REVOPS_SUBAGENT_WORKFLOW_ID",
+          "mode": "list",
+          "cachedResultName": "RevOps Subagent - Upgrade"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "firstname ": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('firstname_', ``, 'string') }}",
+            "lastname": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('lastname', ``, 'string') }}",
+            "company": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('company', ``, 'string') }}",
+            "role": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('role', ``, 'string') }}",
+            "email": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('email', ``, 'string') }}",
+            "rationale": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('rationale', ``, 'string') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "firstname ",
+              "displayName": "firstname ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "lastname",
+              "displayName": "lastname",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "company",
+              "displayName": "company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "role",
+              "displayName": "role",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "rationale",
+              "displayName": "rationale",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        912,
+        224
+      ],
+      "id": "7be2ea6f-51e2-4fbe-a0ae-56bfca2c48aa",
+      "name": "Call RevOps Subagent"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Google Drive Trigger": {
+      "main": [
+        [
+          {
+            "node": "Download file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download file": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Push a message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Push a message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'SDR Subagent - Upgrade'": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'prospecting subagent - Controlled Test'": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call RevOps Subagent": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "nodeGroups": [],
+  "tags": []
+}
